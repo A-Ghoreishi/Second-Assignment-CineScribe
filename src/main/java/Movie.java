@@ -4,6 +4,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.io.BufferedReader;
 import java.util.ArrayList;
+
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONArray;
 
@@ -17,7 +19,7 @@ public class Movie {
     public Movie(ArrayList<String> actorsList, String rating, int ImdbVotes){
         //TODO --> (Write a proper constructor using the get_from_api functions)
         ImdbVotes = 0;
-        rating = "";
+        rating = null;
         actorsList = new ArrayList<>();
         
     }
@@ -44,46 +46,69 @@ public class Movie {
         //handle an error if the chosen movie is not found
         return stringBuilder.toString();
     }
-    public int getImdbVotesViaApi(String moviesInfoJson){
+    public int getImdbVotesViaApi(String moviesInfoJson) throws IOException{
+
         //TODO --> (This function must change and return the "ImdbVotes" as an Integer)
         // NOTICE :: you are not permitted to convert this function to return a String instead of an int !!!
-        JSONObject jsonObject = new JSONObject(API_KEY);
-        JSONObject Title = jsonObject.getJSONObject("Title");
-        JSONObject imbdVotes = Title.getJSONObject("imbdVotes");
-        int ImdbVotes = 0;
-        String votes = jsonObject.getString("imbdVotes");
-        ImdbVotes = Integer.parseInt(votes);
-        System.out.print("IMBD Votes: ");
+        JSONObject IMDB = new JSONObject(moviesInfoJson);
+        int ImdbVotes = Integer.parseInt(IMDB.getString("imdbVotes").replace(",", ""));
         return ImdbVotes;
     }
 
-    public String getRatingViaApi(String moviesInfoJson){
-        //TODO --> (This function must return the rating in the "Ratings" part
-        // where the source is "Internet Movie Database")  -->
-        JSONObject jsonObject = new JSONObject(API_KEY);
-        JSONObject Title = jsonObject.getJSONObject("Title");
-        JSONObject imbdRating = Title.getJSONObject("imbdRating");
-        String rating = "";
-        rating = jsonObject.getString("imbdRating");
-        System.out.print("IMBD Rating: ");
-        return rating;
-    }
+    public String getRatingViaApi(String moviesInfoJson) {
+        try {
+            JSONObject jsonObject = new JSONObject(moviesInfoJson);
 
-    public void getActorListViaApi(String movieInfoJson){
-        //TODO --> (This function must return the "Actors" in actorsList)
-        JSONObject jsonObject = new JSONObject(API_KEY);
-        JSONObject Title = jsonObject.getJSONObject("Title");
-        JSONObject Actors = Title.getJSONObject("Actors");
-        System.out.println("Actors: {");
 
-        for(String actorList : Actors.keySet()){
-            String actorValue = Actors.getString(actorList);
-            System.out.println("      " + actorValue);
+            JSONArray ratingsArray = jsonObject.getJSONArray("Ratings");
+
+
+            for (int i = 0; i < ratingsArray.length(); i++) {
+                JSONObject ratingObject = ratingsArray.getJSONObject(i);
+
+
+                if ("Internet Movie Database".equals(ratingObject.getString("Source"))) {
+
+                    String rating = ratingObject.getString("Value");
+                    System.out.println("IMDB Rating: " + rating);
+                    return rating;
+                }
+            }
+
+            System.out.println("IMDB Rating not found");
+            return null;
+        } catch (JSONException e) {
+            e.printStackTrace();
+            return null;
         }
-
-        System.out.println("}");
-
-
-
     }
+
+
+    public void getActorListViaApi(String movieInfoJson) {
+        try {
+            JSONObject jsonObject = new JSONObject(movieInfoJson);
+
+
+            JSONArray actorsArray = jsonObject.getJSONArray("Actors");
+
+            System.out.println("Actors: {");
+            for (int i = 0; i < actorsArray.length(); i++) {
+                String actorName = actorsArray.getString(i);
+                System.out.println("      " + actorName);
+            }
+            System.out.println("}");
+
+        } catch (JSONException e) {
+
+            try {
+                String singleActor = new JSONObject(movieInfoJson).getString("Actors");
+                System.out.println("Actors: {" + singleActor + "}");
+            } catch (JSONException innerException) {
+                // Handle the error gracefully
+                innerException.printStackTrace();
+                System.out.println("Error parsing Actors data");
+            }
+        }
+    }
+
 }
